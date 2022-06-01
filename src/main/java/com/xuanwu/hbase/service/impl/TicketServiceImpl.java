@@ -24,7 +24,7 @@ public class TicketServiceImpl implements TicketService {
 
     @PostConstruct
     public void init() {
-        final int count = 10;
+        final int count = 100 * 10000;
         Stream.iterate(0, index -> index + 1)
             .limit(count)
             .forEach(index -> {
@@ -34,7 +34,7 @@ public class TicketServiceImpl implements TicketService {
 
     @Override
     public void saveTicket(Ticket ticket) {
-        String id = String.valueOf(ticket.getId());
+        String id = UUID.randomUUID().toString();
         List<Pair<String, String>> infoColumnPairs = buildInfoColumnPairs(ticket);
         HBaseUtils.putRow(TABLE_NAME, id, COLUMN_FAMILY_INFO, infoColumnPairs);
         List<Pair<String, String>> bizColumnPairs = buildBizColumnPairs(ticket);

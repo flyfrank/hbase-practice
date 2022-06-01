@@ -1,0 +1,54 @@
+<configuration>
+    <property name="log.path" value="./logs" />
+    <property name="log.pattern" value="[%d{yyyy-MM-dd HH:mm:ss}] %highlight(%-5level) %cyan(%thread)  %green(%-40.40logger{39}) - %m%n " />
+    <property name="log.filepattern" value="[%d{yyyy-MM-dd HH:mm:ss}] %-5level %thread  %-40.40logger{39} - %m%n " />
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>${log.pattern}</pattern>
+        </encoder>
+    </appender>
+    <appender name="SYSTEM" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${log.path}/system.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${log.path}/system.log.%d{yyyy-MM-dd}</fileNamePattern>
+            <maxHistory>360</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>${log.filepattern}</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="ERROR" class="ch.qos.logback.core.rolling.RollingFileAppender" >
+        <file>${log.path}/error.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${log.path}/error.log.%d{yyyy-MM-dd}</fileNamePattern>
+            <maxHistory>360</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>${log.filepattern}</pattern>
+        </encoder>
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>ERROR</level>
+        </filter>
+    </appender>
+
+    <appender name="MSG_SEND" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${log.path}/msg-send.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${log.path}/msg-send.log.%d{yyyy-MM-dd}</fileNamePattern>
+            <maxHistory>360</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>${log.filepattern}</pattern>
+        </encoder>
+    </appender>
+    
+    <root level="INFO">
+        <appender-ref ref="STDOUT" /> 
+        <appender-ref ref="SYSTEM" />/>
+        <appender-ref ref="ERROR" />
+        <appender-ref ref="MSG_SEND" />
+    </root>
+
+
+</configuration>
