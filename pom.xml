@@ -15,7 +15,7 @@
 	<description>Hbase database practice for Spring Boot</description>
 	<properties>
 		<java.version>1.8</java.version>
-		<hbase.version>2.2.4</hbase.version>
+		<hbase.version>2.4.12</hbase.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -30,7 +30,7 @@
 		</dependency>
 		<dependency>
 			<groupId>org.apache.hbase</groupId>
-			<artifactId>hbase-shaded-client</artifactId>
+			<artifactId>hbase-client</artifactId>
 			<version>${hbase.version}</version>
 		</dependency>
 		<dependency>
@@ -52,6 +52,12 @@
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
 			<version>1.18.24</version>
+		</dependency>
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.12</version>
+			<scope>test</scope>
 		</dependency>
     </dependencies>
 	<build>

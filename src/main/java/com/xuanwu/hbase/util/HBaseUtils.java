@@ -1,6 +1,6 @@
 package com.xuanwu.hbase.util;
 
-import org.apache.commons.lang3.tuple.Pair;
+import javafx.util.Pair;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
@@ -33,7 +33,7 @@ public class HBaseUtils {
         Configuration configuration = HBaseConfiguration.create();
         configuration.set("hbase.zookeeper.property.clientPort", "2181");
         // 如果是集群 则主机名用逗号分隔
-        configuration.set("hbase.zookeeper.quorum", "hadoop001");
+        configuration.set("hbase.zookeeper.quorum", "172.16.74.71");
         try {
             connection = ConnectionFactory.createConnection(configuration);
         } catch (IOException e) {
