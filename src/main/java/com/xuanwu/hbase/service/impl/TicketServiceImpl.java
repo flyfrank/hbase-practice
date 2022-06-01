@@ -1,6 +1,8 @@
 package com.xuanwu.hbase.service.impl;
 
 import com.xuanwu.hbase.entity.Ticket;
+import com.xuanwu.hbase.entity.TicketHBaseColumnEntity;
+import com.xuanwu.hbase.entity.TicketHBaseRowEntity;
 import com.xuanwu.hbase.service.TicketService;
 import com.xuanwu.hbase.util.HBaseUtils;
 import com.xuanwu.hbase.util.SnowflakeGenerator;
@@ -11,7 +13,9 @@ import org.springframework.stereotype.Service;
 import javax.annotation.PostConstruct;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Slf4j
@@ -20,26 +24,51 @@ public class TicketServiceImpl implements TicketService {
     private static final String TABLE_NAME = "gsms_sms_ticket";
     private static final String COLUMN_FAMILY_INFO = "info";
     private static final String COLUMN_FAMILY_BIZ = "biz";
+    private static final int GROUP_COUNT = 1000;
     private SnowflakeGenerator snowflakeGenerator = new SnowflakeGenerator(0, 0);
 
     @PostConstruct
     public void init() {
         final int count = 100 * 10000;
-        Stream.iterate(0, index -> index + 1)
-            .limit(count)
-            .forEach(index -> {
-                saveTicket(createTicket());
-            });
+
     }
 
     @Override
     public void saveTicket(Ticket ticket) {
         String id = UUID.randomUUID().toString();
-        List<Pair<String, String>> infoColumnPairs = buildInfoColumnPairs(ticket);
-        HBaseUtils.putRow(TABLE_NAME, id, COLUMN_FAMILY_INFO, infoColumnPairs);
-        List<Pair<String, String>> bizColumnPairs = buildBizColumnPairs(ticket);
-        HBaseUtils.putRow(TABLE_NAME, id, COLUMN_FAMILY_BIZ, bizColumnPairs);
+        buildTicketHBaseRowEntity(ticket);
+
         log.info("Save ticket to HBase, ticket id:{}", id);
+    }
+
+    @Override
+    public void saveTicketList(int count) {
+        Map<Boolean, List<Integer>> collect = Stream.iterate(0, index -> index + 1)
+            .limit(count)
+            .collect(Collectors.groupingBy(index -> index % GROUP_COUNT == 0));
+        collect.forEach((key, value) -> {
+            long startTime = System.currentTimeMillis();
+            List<TicketHBaseRowEntity> ticketRowList = value.stream()
+                .map(index -> buildTicketHBaseRowEntity(createTicket()))
+                .collect(Collectors.toList());
+            HBaseUtils.putRows(TABLE_NAME, ticketRowList);
+            log.info("==== save 1000 tickets to HBase, cost time:{}", System.currentTimeMillis() -startTime);
+        });
+    }
+
+    private TicketHBaseRowEntity buildTicketHBaseRowEntity(Ticket ticket) {
+        TicketHBaseColumnEntity infoColumnEntity = new TicketHBaseColumnEntity()
+            .setColumnFamilyName(COLUMN_FAMILY_INFO)
+            .setPairList(buildInfoColumnPairs(ticket));
+        TicketHBaseColumnEntity bizColumnEntity = new TicketHBaseColumnEntity()
+            .setColumnFamilyName(COLUMN_FAMILY_BIZ)
+            .setPairList(buildBizColumnPairs(ticket));
+        String rowKey = UUID.randomUUID().toString();
+        log.info("Generate rowKey:{}", rowKey);
+        return new TicketHBaseRowEntity()
+            .setRowKey(rowKey)
+            .setInfoColumn(infoColumnEntity)
+            .setBizColumn(bizColumnEntity);
     }
 
 

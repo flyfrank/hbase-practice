@@ -1,5 +1,6 @@
 package com.xuanwu.hbase.util;
 
+import com.xuanwu.hbase.entity.TicketHBaseRowEntity;
 import javafx.util.Pair;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -22,6 +23,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 /**
  *
@@ -123,6 +125,37 @@ public class HBaseUtils {
             Put put = new Put(Bytes.toBytes(rowKey));
             pairList.forEach(pair -> put.addColumn(Bytes.toBytes(columnFamilyName), Bytes.toBytes(pair.getKey()), Bytes.toBytes(pair.getValue())));
             table.put(put);
+            table.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return true;
+    }
+
+    public static boolean putRows(String tableName, List<TicketHBaseRowEntity> ticketRows) {
+        try {
+            Table table = connection.getTable(TableName.valueOf(tableName));
+            ticketRows.forEach(ticketRow -> {
+                Put ticketInfoPut = new Put(Bytes.toBytes(ticketRow.getRowKey()));
+                ticketRow.getInfoColumn()
+                    .getPairList()
+                    .forEach(pair -> ticketInfoPut.addColumn(Bytes.toBytes(ticketRow.getInfoColumn().getColumnFamilyName()), Bytes.toBytes(pair.getKey()), Bytes.toBytes(pair.getValue())));
+                try {
+                    table.put(ticketInfoPut);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+
+                Put ticketBizPut = new Put(Bytes.toBytes(ticketRow.getRowKey()));
+                ticketRow.getInfoColumn()
+                    .getPairList()
+                    .forEach(pair -> ticketBizPut.addColumn(Bytes.toBytes(ticketRow.getInfoColumn().getColumnFamilyName()), Bytes.toBytes(pair.getKey()), Bytes.toBytes(pair.getValue())));
+                try {
+                    table.put(ticketBizPut);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            });
             table.close();
         } catch (IOException e) {
             e.printStackTrace();
