@@ -29,8 +29,8 @@ public class TicketServiceImpl implements TicketService {
 
     @PostConstruct
     public void init() {
-        final int count = 100 * 10000;
-
+        int count = 100 * 10000;
+        saveTicketList(count);
     }
 
     @Override
@@ -43,16 +43,17 @@ public class TicketServiceImpl implements TicketService {
 
     @Override
     public void saveTicketList(int count) {
-        Map<Boolean, List<Integer>> collect = Stream.iterate(0, index -> index + 1)
+        Map<Integer, List<Integer>> collect = Stream.iterate(0, index -> index + 1)
             .limit(count)
-            .collect(Collectors.groupingBy(index -> index % GROUP_COUNT == 0));
+            .collect(Collectors.groupingBy(index -> index % GROUP_COUNT));
         collect.forEach((key, value) -> {
             long startTime = System.currentTimeMillis();
             List<TicketHBaseRowEntity> ticketRowList = value.stream()
                 .map(index -> buildTicketHBaseRowEntity(createTicket()))
                 .collect(Collectors.toList());
+            log.info("==== save 1000 tickets to HBase");
             HBaseUtils.putRows(TABLE_NAME, ticketRowList);
-            log.info("==== save 1000 tickets to HBase, cost time:{}", System.currentTimeMillis() -startTime);
+            log.info("==== cost time:{}", System.currentTimeMillis() -startTime);
         });
     }
 
@@ -64,7 +65,7 @@ public class TicketServiceImpl implements TicketService {
             .setColumnFamilyName(COLUMN_FAMILY_BIZ)
             .setPairList(buildBizColumnPairs(ticket));
         String rowKey = UUID.randomUUID().toString();
-        log.info("Generate rowKey:{}", rowKey);
+        //log.info("Generate rowKey:{}", rowKey);
         return new TicketHBaseRowEntity()
             .setRowKey(rowKey)
             .setInfoColumn(infoColumnEntity)
