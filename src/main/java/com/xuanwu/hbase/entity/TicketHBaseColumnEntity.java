@@ -1,8 +1,8 @@
 package com.xuanwu.hbase.entity;
 
-import javafx.util.Pair;
 import lombok.Data;
 import lombok.experimental.Accessors;
+import org.apache.hadoop.hbase.util.Pair;
 
 import java.util.List;
 

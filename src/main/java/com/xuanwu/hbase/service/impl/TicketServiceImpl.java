@@ -6,8 +6,8 @@ import com.xuanwu.hbase.entity.TicketHBaseRowEntity;
 import com.xuanwu.hbase.service.TicketService;
 import com.xuanwu.hbase.util.HBaseUtils;
 import com.xuanwu.hbase.util.SnowflakeGenerator;
-import javafx.util.Pair;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.hadoop.hbase.util.Pair;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
