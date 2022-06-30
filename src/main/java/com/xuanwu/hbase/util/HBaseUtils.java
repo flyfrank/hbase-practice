@@ -1,7 +1,6 @@
 package com.xuanwu.hbase.util;
 
 import com.xuanwu.hbase.entity.TicketHBaseRowEntity;
-import javafx.util.Pair;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
@@ -20,10 +19,10 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 
 /**
  *
@@ -123,7 +122,7 @@ public class HBaseUtils {
         try {
             Table table = connection.getTable(TableName.valueOf(tableName));
             Put put = new Put(Bytes.toBytes(rowKey));
-            pairList.forEach(pair -> put.addColumn(Bytes.toBytes(columnFamilyName), Bytes.toBytes(pair.getKey()), Bytes.toBytes(pair.getValue())));
+            pairList.forEach(pair -> put.addColumn(Bytes.toBytes(columnFamilyName), Bytes.toBytes(pair.getFirst()), Bytes.toBytes(pair.getSecond())));
             table.put(put);
             table.close();
         } catch (IOException e) {
@@ -139,7 +138,7 @@ public class HBaseUtils {
                 Put ticketInfoPut = new Put(Bytes.toBytes(ticketRow.getRowKey()));
                 ticketRow.getInfoColumn()
                     .getPairList()
-                    .forEach(pair -> ticketInfoPut.addColumn(Bytes.toBytes(ticketRow.getInfoColumn().getColumnFamilyName()), Bytes.toBytes(pair.getKey()), Bytes.toBytes(pair.getValue())));
+                    .forEach(pair -> ticketInfoPut.addColumn(Bytes.toBytes(ticketRow.getInfoColumn().getColumnFamilyName()), Bytes.toBytes(pair.getFirst()), Bytes.toBytes(pair.getSecond())));
                 try {
                     table.put(ticketInfoPut);
                 } catch (IOException e) {
@@ -149,7 +148,7 @@ public class HBaseUtils {
                 Put ticketBizPut = new Put(Bytes.toBytes(ticketRow.getRowKey()));
                 ticketRow.getInfoColumn()
                     .getPairList()
-                    .forEach(pair -> ticketBizPut.addColumn(Bytes.toBytes(ticketRow.getInfoColumn().getColumnFamilyName()), Bytes.toBytes(pair.getKey()), Bytes.toBytes(pair.getValue())));
+                    .forEach(pair -> ticketBizPut.addColumn(Bytes.toBytes(ticketRow.getInfoColumn().getColumnFamilyName()), Bytes.toBytes(pair.getFirst()), Bytes.toBytes(pair.getSecond())));
                 try {
                     table.put(ticketBizPut);
                 } catch (IOException e) {
