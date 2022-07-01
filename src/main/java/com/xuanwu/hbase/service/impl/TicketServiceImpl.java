@@ -15,6 +15,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -26,10 +30,12 @@ public class TicketServiceImpl implements TicketService {
     private static final String COLUMN_FAMILY_BIZ = "biz";
     private static final int GROUP_COUNT = 1000;
     private SnowflakeGenerator snowflakeGenerator = new SnowflakeGenerator(0, 0);
+    private ExecutorService executorService = new ThreadPoolExecutor(8, 8, 60, TimeUnit.MINUTES, new LinkedBlockingQueue<>());
 
     @PostConstruct
     public void init() {
         int count = 100 * 10000;
+        HBaseUtils.createTable(TABLE_NAME, Stream.of(COLUMN_FAMILY_INFO, COLUMN_FAMILY_BIZ).collect(Collectors.toList()));
         saveTicketList(count);
     }
 
@@ -47,14 +53,20 @@ public class TicketServiceImpl implements TicketService {
             .limit(count)
             .collect(Collectors.groupingBy(index -> index % GROUP_COUNT));
         collect.forEach((key, value) -> {
-            long startTime = System.currentTimeMillis();
-            List<TicketHBaseRowEntity> ticketRowList = value.stream()
-                .map(index -> buildTicketHBaseRowEntity(createTicket()))
-                .collect(Collectors.toList());
-            log.info("==== save 1000 tickets to HBase");
-            HBaseUtils.putRows(TABLE_NAME, ticketRowList);
-            log.info("==== cost time:{}", System.currentTimeMillis() -startTime);
+            executorService.submit(() -> {
+                batchSaveTicket(value);
+            });
         });
+    }
+
+    private void batchSaveTicket(List<Integer> value) {
+        long startTime = System.currentTimeMillis();
+        List<TicketHBaseRowEntity> ticketRowList = value.stream()
+            .map(index -> buildTicketHBaseRowEntity(createTicket()))
+            .collect(Collectors.toList());
+        log.info("==== save 1000 tickets to HBase");
+        HBaseUtils.putRows(TABLE_NAME, ticketRowList);
+        log.info("==== cost time:{}", System.currentTimeMillis() -startTime);
     }
 
     private TicketHBaseRowEntity buildTicketHBaseRowEntity(Ticket ticket) {

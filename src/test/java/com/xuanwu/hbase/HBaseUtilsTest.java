@@ -1,13 +1,13 @@
 package com.xuanwu.hbase;
 
 import com.xuanwu.hbase.util.HBaseUtils;
-import javafx.util.Pair;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
 import org.junit.Test;
 
 import java.util.Arrays;
