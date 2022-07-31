@@ -7,6 +7,8 @@ import com.xuanwu.hbase.service.TicketService;
 import com.xuanwu.hbase.util.HBaseUtils;
 import com.xuanwu.hbase.util.SnowflakeGenerator;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.util.Pair;
 import org.springframework.stereotype.Service;
 
@@ -28,15 +30,14 @@ public class TicketServiceImpl implements TicketService {
     private static final String TABLE_NAME = "gsms_sms_ticket";
     private static final String COLUMN_FAMILY_INFO = "info";
     private static final String COLUMN_FAMILY_BIZ = "biz";
-    private static final int GROUP_COUNT = 1000;
+    private static final int GROUP_COUNT = 2000;
     private SnowflakeGenerator snowflakeGenerator = new SnowflakeGenerator(0, 0);
-    private ExecutorService executorService = new ThreadPoolExecutor(8, 8, 60, TimeUnit.MINUTES, new LinkedBlockingQueue<>());
+    private ExecutorService executorService = new ThreadPoolExecutor(1, 1, 60, TimeUnit.MINUTES, new LinkedBlockingQueue<>());
 
     @PostConstruct
     public void init() {
         int count = 100 * 10000;
         HBaseUtils.createTable(TABLE_NAME, Stream.of(COLUMN_FAMILY_INFO, COLUMN_FAMILY_BIZ).collect(Collectors.toList()));
-        saveTicketList(count);
     }
 
     @Override
@@ -49,24 +50,41 @@ public class TicketServiceImpl implements TicketService {
 
     @Override
     public void saveTicketList(int count) {
+        if (count == 0) {
+            count = 100 * 10000;
+        }
         Map<Integer, List<Integer>> collect = Stream.iterate(0, index -> index + 1)
             .limit(count)
-            .collect(Collectors.groupingBy(index -> index % GROUP_COUNT));
+            .collect(Collectors.groupingBy(index -> index / GROUP_COUNT));
         collect.forEach((key, value) -> {
             executorService.submit(() -> {
-                batchSaveTicket(value);
+                batchSaveTicket(key, value);
             });
         });
     }
 
-    private void batchSaveTicket(List<Integer> value) {
-        long startTime = System.currentTimeMillis();
+    @Override
+    public Object getTickets() {
+        String startKey = "0-20220729";
+        String endKey = "z-20220729";
+        FilterList filterList = new FilterList();
+        ResultScanner scanner = HBaseUtils.getScanner(TABLE_NAME, startKey, endKey, filterList);
+        List<String> results = new ArrayList<>();
+        scanner.forEach(result -> {
+            String rowString = new String(result.getRow());
+            results.add(rowString);
+            System.out.println(result);
+        });
+        return results;
+    }
+
+    private void batchSaveTicket(int groupIndex, List<Integer> value) {
         List<TicketHBaseRowEntity> ticketRowList = value.stream()
             .map(index -> buildTicketHBaseRowEntity(createTicket()))
             .collect(Collectors.toList());
-        log.info("==== save 1000 tickets to HBase");
+        long startTime = System.currentTimeMillis();
         HBaseUtils.putRows(TABLE_NAME, ticketRowList);
-        log.info("==== cost time:{}", System.currentTimeMillis() -startTime);
+        log.info("groupIndex:{}, save {} tickets to HBase, cost time:{}",groupIndex,  GROUP_COUNT, System.currentTimeMillis() -startTime);
     }
 
     private TicketHBaseRowEntity buildTicketHBaseRowEntity(Ticket ticket) {
@@ -76,14 +94,30 @@ public class TicketServiceImpl implements TicketService {
         TicketHBaseColumnEntity bizColumnEntity = new TicketHBaseColumnEntity()
             .setColumnFamilyName(COLUMN_FAMILY_BIZ)
             .setPairList(buildBizColumnPairs(ticket));
-        String rowKey = UUID.randomUUID().toString();
-        //log.info("Generate rowKey:{}", rowKey);
+        String rowKey = buildRowKey();
         return new TicketHBaseRowEntity()
             .setRowKey(rowKey)
             .setInfoColumn(infoColumnEntity)
             .setBizColumn(bizColumnEntity);
     }
 
+    /**
+     * 生成RowKey
+     * 第一段：日期字符串
+     * 第二段：企业账号Id
+     * 第三段：批次Id
+     * 第四段：反转后的时间戳
+     * @return
+     */
+    private String buildRowKey() {
+        StringBuilder builder = new StringBuilder();
+        builder.append(Long.MAX_VALUE - System.currentTimeMillis())
+            .append("~")
+            .append("00000001")
+            .append("~")
+            .append(snowflakeGenerator.nextId());
+        return builder.toString();
+    }
 
     private Ticket createTicket() {
         return new Ticket()

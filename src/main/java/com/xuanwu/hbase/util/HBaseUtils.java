@@ -1,6 +1,7 @@
 package com.xuanwu.hbase.util;
 
 import com.xuanwu.hbase.entity.TicketHBaseRowEntity;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
@@ -22,11 +23,15 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  *
  */
+@Slf4j
 public class HBaseUtils {
     private static Connection connection;
 
@@ -121,8 +126,7 @@ public class HBaseUtils {
     public static boolean putRow(String tableName, String rowKey, String columnFamilyName, List<Pair<String, String>> pairList) {
         try {
             Table table = connection.getTable(TableName.valueOf(tableName));
-            Put put = new Put(Bytes.toBytes(rowKey));
-            pairList.forEach(pair -> put.addColumn(Bytes.toBytes(columnFamilyName), Bytes.toBytes(pair.getFirst()), Bytes.toBytes(pair.getSecond())));
+            Put put = buildPut(rowKey, pairList, columnFamilyName);
             table.put(put);
             table.close();
         } catch (IOException e) {
@@ -134,32 +138,28 @@ public class HBaseUtils {
     public static boolean putRows(String tableName, List<TicketHBaseRowEntity> ticketRows) {
         try {
             Table table = connection.getTable(TableName.valueOf(tableName));
-            ticketRows.forEach(ticketRow -> {
-                Put ticketInfoPut = new Put(Bytes.toBytes(ticketRow.getRowKey()));
-                ticketRow.getInfoColumn()
-                    .getPairList()
-                    .forEach(pair -> ticketInfoPut.addColumn(Bytes.toBytes(ticketRow.getInfoColumn().getColumnFamilyName()), Bytes.toBytes(pair.getFirst()), Bytes.toBytes(pair.getSecond())));
-                try {
-                    table.put(ticketInfoPut);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+            List<Put> putList = ticketRows.stream().map(ticketRow -> {
+                Put ticketInfoPut = buildPut(ticketRow.getRowKey(), ticketRow.getInfoColumn()
+                    .getPairList(), ticketRow.getInfoColumn().getColumnFamilyName());
 
-                Put ticketBizPut = new Put(Bytes.toBytes(ticketRow.getRowKey()));
-                ticketRow.getInfoColumn()
-                    .getPairList()
-                    .forEach(pair -> ticketBizPut.addColumn(Bytes.toBytes(ticketRow.getInfoColumn().getColumnFamilyName()), Bytes.toBytes(pair.getFirst()), Bytes.toBytes(pair.getSecond())));
-                try {
-                    table.put(ticketBizPut);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            });
+                Put ticketBizPut = buildPut(ticketRow.getRowKey(), ticketRow.getInfoColumn()
+                    .getPairList(), ticketRow.getInfoColumn().getColumnFamilyName());
+                return Arrays.asList(ticketInfoPut, ticketBizPut);
+            }).flatMap(Collection::stream).collect(Collectors.toList());
+
+            table.put(putList);
             table.close();
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
         return true;
+    }
+
+    private static Put buildPut(String rowKey, List<Pair<String, String>> pairList, String columnFamilyName) {
+        Put put = new Put(Bytes.toBytes(rowKey));
+        pairList.forEach(pair -> put.addColumn(Bytes.toBytes(columnFamilyName), Bytes.toBytes(pair.getFirst()),
+            Bytes.toBytes(pair.getSecond())));
+        return put;
     }
 
 
@@ -259,9 +259,16 @@ public class HBaseUtils {
         try {
             Table table = connection.getTable(TableName.valueOf(tableName));
             Scan scan = new Scan();
-            scan.withStartRow(Bytes.toBytes(startRowKey));
-            scan.withStopRow(Bytes.toBytes(endRowKey));
-            scan.setFilter(filterList);
+            scan.addFamily(Bytes.toBytes("info"));
+            scan.addFamily(Bytes.toBytes("biz"));
+            long startTime = DateUtils.getTime("2022-07-29 16:28:54");
+            long endTime = System.currentTimeMillis();
+            scan.setTimeRange(startTime, endTime);
+            log.info("Scan startTime:{}, endTime:{}", startTime, endTime);
+//            scan.withStartRow(Bytes.toBytes(startRowKey));
+//            scan.withStopRow(Bytes.toBytes(endRowKey));
+            // scan.setFilter(filterList);
+            scan.setLimit(10);
             return table.getScanner(scan);
         } catch (IOException e) {
             e.printStackTrace();

@@ -7,4 +7,6 @@ public interface TicketService {
     void saveTicket(Ticket ticket);
 
     void saveTicketList(int count);
+
+    Object getTickets();
 }
